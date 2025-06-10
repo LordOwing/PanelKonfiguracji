@@ -1,79 +1,130 @@
 package com.example.panelkonfiguracji;
 
-
-
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import android.os.Bundle;
-import android.widget.ListView;
 import android.widget.ArrayAdapter;
-import androidx.appcompat.app.AppCompatActivity; // lub android.app.Activity dla starszych projektów
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.Toast;
+import android.widget.ListView;
+import android.widget.SeekBar;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
-import java.util.Arrays; // Potrzebne, jeśli inicjujemy ArrayList z tablicy
 
 public class MainActivity extends AppCompatActivity {
 
-    // Deklaracja zmiennych dla ListView i danych
-    ListView mySimpleListView;
-    ArrayList<String> planetsList; // Nasze źródło danych
+    private ListView settingsListView;
+    private TextView editingLabelTextView;
+    private SeekBar valueSeekBar;
+    private TextView seekBarValueTextView;
+
+    private ArrayList<String> settingNames = new ArrayList<>();
+    private ArrayList<Integer> settingValues = new ArrayList<>();
+    private ArrayList<String> settingUnits = new ArrayList<>();
+    private ArrayList<String> displayItemsForListView = new ArrayList<>();
+
+    private int selectedItemPosition = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main); // Ładujemy layout z ListView
-
-        // Łączymy zmienną z elementem ListView z XML
-        mySimpleListView = findViewById(R.id.lista);
-
-        // Tworzymy i wypełniamy nasze źródło danych
-        planetsList = new ArrayList<>();
-        planetsList.add("Jasność ekranu");
-        planetsList.add("Spaghetti Bolognese");
-        planetsList.add("Krupnik");
-        planetsList.add("Pomidorówka");
-        planetsList.add("Schabowy");
+        setContentView(R.layout.activity_main);
 
 
+        settingsListView = findViewById(R.id.settingsListView);
+        editingLabelTextView = findViewById(R.id.editingLabelTextView);
+        valueSeekBar = findViewById(R.id.valueSeekBar);
+        seekBarValueTextView = findViewById(R.id.seekBarValueTextView);
 
-        // Nowy sposób tworzenia ArrayAdapter z własnym layoutem
-        ArrayAdapter<String> planetAdapter = new ArrayAdapter<>(
-                this,                           // Kontekst
-                R.layout.list_item_setting,   // Nasz własny layout dla elementu
-                R.id.listaView,            // ID TextView wewnątrz naszego layoutu, gdzie ma być wstawiony tekst
-                planetsList                     // Nasze dane
+
+        initializeSettingsData();
+
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                R.layout.list_item_setting,
+                R.id.itemTextView,
+                displayItemsForListView
         );
+        settingsListView.setAdapter(adapter);
 
-        mySimpleListView.setAdapter(planetAdapter);
 
-        // Ustawiamy adapter dla naszego ListView
-        mySimpleListView.setAdapter(planetAdapter);
-        mySimpleListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        settingsListView.setOnItemClickListener((parent, view, position, id) -> {
+            selectedItemPosition = position;
+            updateEditingLabel();
+            updateSeekBar();
+        });
+
+
+        valueSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Metoda wywoływana po kliknięciu na element listy
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser && selectedItemPosition != -1) {
+                    seekBarValueTextView.setText("Wartość: " + progress + settingUnits.get(selectedItemPosition));
+                }
+            }
 
-                // parent: Referencja do adaptera, który dostarczył widok (tutaj planetAdapter)
-                // view: Widok klikniętego elementu (tutaj TextView z simple_list_item_1)
-                // position: Pozycja klikniętego elementu w liście (indeks od 0)
-                // id: Identyfikator wiersza (dla ArrayAdapter często jest taki sam jak position)
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
 
-                // Pobieramy kliknięty element z naszej listy danych
-                String clickedPlanet = planetsList.get(position);
-                // Alternatywnie: String clickedPlanet = (String) parent.getItemAtPosition(position);
-
-                // Wyświetlamy Toast z nazwą klikniętej planety
-                Toast.makeText(MainActivity.this, "Wybrano: " + clickedPlanet + " , idealny wybór!", Toast.LENGTH_SHORT).show();
-
-                // Tutaj mogłaby być logika otwierania nowego ekranu, wyświetlania szczegółów itp.
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                if (selectedItemPosition != -1) {
+                    int newValue = seekBar.getProgress();
+                    settingValues.set(selectedItemPosition, newValue);
+                    updateListViewItem(selectedItemPosition);
+                }
             }
         });
+    }
+
+    private void initializeSettingsData() {
+
+        settingNames.add("Jasność Ekranu");
+        settingNames.add("Głośność Dźwięków");
+        settingNames.add("Czas Automatycznej Blokady");
+        settingNames.add("Czułość Dotyku");
+        settingNames.add("Rozmiar Tekstu");
+
+        settingValues.add(50);
+        settingValues.add(80);
+        settingValues.add(30);
+        settingValues.add(60);
+        settingValues.add(40);
+
+        settingUnits.add("%");
+        settingUnits.add("%");
+        settingUnits.add("s");
+        settingUnits.add("%");
+        settingUnits.add("%");
+
+
+        for (int i = 0; i < settingNames.size(); i++) {
+            displayItemsForListView.add(settingNames.get(i) + ": " +
+                    settingValues.get(i) +
+                    settingUnits.get(i));
+        }
+    }
+
+    private void updateEditingLabel() {
+        if (selectedItemPosition != -1) {
+            editingLabelTextView.setText("Edytujesz: " + settingNames.get(selectedItemPosition));
+            valueSeekBar.setEnabled(true);
+        }
+    }
+
+    private void updateSeekBar() {
+        if (selectedItemPosition != -1) {
+            valueSeekBar.setProgress(settingValues.get(selectedItemPosition));
+            seekBarValueTextView.setText("Wartość: " +
+                    settingValues.get(selectedItemPosition) +
+                    settingUnits.get(selectedItemPosition));
+        }
+    }
+
+    private void updateListViewItem(int position) {
+        displayItemsForListView.set(position,
+                settingNames.get(position) + ": " +
+                        settingValues.get(position) +
+                        settingUnits.get(position));
+
+        ((ArrayAdapter)settingsListView.getAdapter()).notifyDataSetChanged();
     }
 }
